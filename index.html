@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Nhập sổ">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Nhập sổ bảo vệ theo cột - xuất XLSX</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#f3f4f6;color:#111827}
+header{position:sticky;top:0;z-index:5;background:#0f172a;color:#fff;padding:14px 16px}
+h1{font-size:18px;margin:0 0 4px}.sub{font-size:13px;opacity:.85}
+main{padding:10px;max-width:1150px;margin:0 auto 90px}
+.card{background:#fff;border-radius:16px;padding:14px;margin:10px 0;box-shadow:0 1px 7px #0001}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.full{grid-column:1/-1}
+label{font-size:13px;color:#6b7280;display:block;margin:8px 0 4px}
+input,select,textarea{width:100%;padding:10px;border:1px solid #d1d5db;border-radius:12px;font-size:16px;background:#fff}
+textarea{min-height:80px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+button{border:0;border-radius:12px;padding:11px 13px;font-weight:700;font-size:15px}
+.green{background:#16a34a;color:white}.red{background:#dc2626;color:white}.dark{background:#0f172a;color:white}.gray{background:#e5e7eb}.blue{background:#2563eb;color:white}.amber{background:#f59e0b;color:#111827}
+.status{font-size:14px;padding:10px;border-radius:12px;background:#eef2ff;white-space:pre-wrap}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;background:#0b1020;color:#dbeafe;padding:10px;border-radius:12px;font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:13px;background:white}
+th,td{border:1px solid #d1d5db;padding:6px;vertical-align:top}th{background:#e5e7eb;position:sticky;top:58px;z-index:2}
+td input,td select{font-size:13px;padding:5px;border-radius:6px;min-width:85px}
+.small{font-size:12px;color:#6b7280}
+.pill{display:inline-block;border-radius:999px;padding:5px 8px;margin:3px;background:#e0f2fe;font-size:12px}
+.ok{color:#15803d;font-weight:700}.warn{color:#b45309;font-weight:700}
+@media(max-width:650px){.grid{grid-template-columns:1fr}main{padding:8px}table{font-size:12px}button{font-size:14px}}
+</style>
+</head>
+<body>
+<header>
+<h1>Nhập sổ bảo vệ theo cột</h1>
+<div class="sub">Không cần Google Sheet. Đọc theo cột → hiện bảng đúng phom → xuất XLSX/CSV để gửi hoặc copy.</div>
+</header>
+
+<main>
+<section class="card">
+<h2 style="font-size:17px;margin-top:0">1. Thiết lập trang sổ</h2>
+<div class="grid">
+  <div><label>Người thống kê</label><input id="nguoiThongKe" placeholder="Nguyễn Văn A"></div>
+  <div><label>Mã cuốn sổ</label><input id="maSo" placeholder="SO-01-CONG-A"></div>
+  <div><label>Trang số</label><input id="trang" placeholder="12"></div>
+  <div><label>Số dòng trên trang</label><input id="soDong" type="number" min="1" value="20"></div>
+  <div><label>Loại xe mặc định</label><select id="defaultLoaiXe"><option>Ô tô</option><option>Xe máy</option><option>PT khác</option><option></option></select></div>
+  <div><label>Ghi chú mặc định</label><select id="defaultGhiChu"><option>Chở ra</option><option>Chở vào</option><option>NT</option><option>CT</option><option></option></select></div>
+</div>
+<div class="row" style="margin-top:12px">
+  <button class="dark" onclick="saveConfig()">Lưu cấu hình</button>
+  <button class="blue" onclick="createPage()">Tạo bảng trang</button>
+  <button class="gray" onclick="clearPage()">Xóa trang đang nhập</button>
+</div>
+</section>
+
+<section class="card">
+<h2 style="font-size:17px;margin-top:0">2. Đọc theo cột</h2>
+<div class="grid">
+  <div>
+    <label>Chọn cột đang đọc</label>
+    <select id="colMode" onchange="showColumnGuide()">
+      <option value="ngaySo">Ngày sổ</option>
+      <option value="bienSo">Biển số</option>
+      <option value="gioRa">Giờ ra</option>
+      <option value="gioVao">Giờ vào</option>
+      <option value="hoTen">Họ tên</option>
+      <option value="noiDung">Nội dung</option>
+      <option value="khoiLuong">Khối lượng</option>
+    </select>
+  </div>
+  <div>
+    <label>Chế độ tách giá trị</label>
+    <select id="splitMode">
+      <option value="tiep">Nói “tiếp” giữa các dòng</option>
+      <option value="newline">Mỗi dòng một giá trị trong ô nội dung</option>
+    </select>
+  </div>
+</div>
+<div class="row" style="margin-top:12px">
+  <button id="startBtn" class="green">🎤 Bắt đầu đọc cột</button>
+  <button id="stopBtn" class="red">Dừng</button>
+  <button class="dark" onclick="finishColumn()">Finish cột / tự điền</button>
+  <button class="amber" onclick="applyDefaults()">Điền mặc định loại xe + ghi chú</button>
+</div>
+<p id="status" class="status">Trạng thái: chưa tạo bảng trang.</p>
+<div id="guide" class="mono"></div>
+<div class="small">Nếu iPhone nhận giọng nói không chuẩn, có thể sửa trực tiếp trong ô “Nội dung vừa nghe” rồi bấm Finish cột.</div>
+</section>
+
+<section class="card">
+<h2 style="font-size:17px;margin-top:0">3. Nội dung vừa nghe của cột</h2>
+<textarea id="heard" placeholder="Ví dụ: 19H02254 tiếp 29C12345 tiếp 30A88888 finish cột"></textarea>
+<div class="row" style="margin-top:8px">
+  <button class="gray" onclick="finishColumn()">Tự tách và điền vào cột</button>
+  <button class="gray" onclick="clearHeard()">Xóa nội dung vừa nghe</button>
+</div>
+</section>
+
+<section class="card">
+<h2 style="font-size:17px;margin-top:0">4. Bảng trang sổ</h2>
+<div class="row" style="margin-bottom:8px">
+  <button class="blue" onclick="exportXlsx()">Xuất XLSX</button>
+  <button class="gray" onclick="exportCsv()">Xuất CSV</button>
+  <button class="gray" onclick="copyTSV()">Copy để dán Excel</button>
+  <button class="gray" onclick="addRow()">Thêm dòng</button>
+  <button class="gray" onclick="deleteLastRow()">Xóa dòng cuối</button>
+</div>
+<div style="overflow:auto;max-height:70vh">
+<table id="tbl">
+<thead><tr>
+<th>STT</th><th>Người thống kê</th><th>Mã cuốn sổ</th><th>Trang</th><th>Dòng</th>
+<th>Ngày sổ</th><th>Loại xe</th><th>Biển số</th><th>Giờ ra</th><th>Giờ vào</th>
+<th>Họ tên</th><th>Nội dung</th><th>Khối lượng</th><th>Ghi chú</th><th>Trạng thái</th>
+</tr></thead>
+<tbody></tbody>
+</table>
+</div>
+</section>
+</main>
+
+<script>
+const configIds=["nguoiThongKe","maSo","trang","soDong","defaultLoaiXe","defaultGhiChu"];
+const editCols=["ngaySo","loaiXe","bienSo","gioRa","gioVao","hoTen","noiDung","khoiLuong","ghiChu","trangThai"];
+let rows=JSON.parse(localStorage.getItem("sbv_xlsx_rows")||"[]");
+let recognition=null, listening=false;
+
+function $(id){return document.getElementById(id)}
+function setStatus(s){$("status").textContent="Trạng thái: "+s}
+function saveConfig(){configIds.forEach(id=>localStorage.setItem("sbv_xlsx_"+id,$(id).value));setStatus("đã lưu cấu hình trên máy này.")}
+function loadConfig(){configIds.forEach(id=>{const v=localStorage.getItem("sbv_xlsx_"+id); if(v!==null) $(id).value=v})}
+function blankRow(){return {ngaySo:"",loaiXe:$("defaultLoaiXe").value||"Ô tô",bienSo:"",gioRa:"",gioVao:"",hoTen:"",noiDung:"",khoiLuong:"",ghiChu:$("defaultGhiChu").value||"",trangThai:"Chưa kiểm tra"}}
+function createPage(){
+  saveConfig();
+  const n=parseInt($("soDong").value||"20",10);
+  if(rows.length && !confirm("Tạo trang mới sẽ xóa bảng đang nhập trên máy này. Tiếp tục?")) return;
+  rows=Array.from({length:n}, blankRow);
+  persist(); render(); setStatus("đã tạo "+n+" dòng cho trang "+$("trang").value+".");
+}
+function clearPage(){ if(confirm("Xóa toàn bộ trang đang nhập?")){ rows=[]; persist(); render(); setStatus("đã xóa trang đang nhập."); } }
+function addRow(){rows.push(blankRow()); persist(); render()}
+function deleteLastRow(){rows.pop(); persist(); render()}
+function persist(){localStorage.setItem("sbv_xlsx_rows",JSON.stringify(rows))}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
+function render(){
+  const tb=document.querySelector("#tbl tbody"); tb.innerHTML="";
+  rows.forEach((r,i)=>{
+    const tr=document.createElement("tr");
+    const fixed=[i+1,$("nguoiThongKe").value,$("maSo").value,$("trang").value,i+1];
+    tr.innerHTML = fixed.map(x=>`<td>${escapeHtml(x)}</td>`).join("") + editCols.map(c=>{
+      if(c==="loaiXe") return `<td><select data-i="${i}" data-c="${c}" onchange="cellChange(this)"><option ${r[c]===""?"selected":""}></option><option ${r[c]==="Ô tô"?"selected":""}>Ô tô</option><option ${r[c]==="Xe máy"?"selected":""}>Xe máy</option><option ${r[c]==="PT khác"?"selected":""}>PT khác</option></select></td>`;
+      if(c==="ghiChu") return `<td><select data-i="${i}" data-c="${c}" onchange="cellChange(this)"><option ${r[c]===""?"selected":""}></option><option ${r[c]==="Chở ra"?"selected":""}>Chở ra</option><option ${r[c]==="Chở vào"?"selected":""}>Chở vào</option><option ${r[c]==="NT"?"selected":""}>NT</option><option ${r[c]==="CT"?"selected":""}>CT</option></select></td>`;
+      if(c==="trangThai") return `<td><select data-i="${i}" data-c="${c}" onchange="cellChange(this)"><option ${r[c]==="Chưa kiểm tra"?"selected":""}>Chưa kiểm tra</option><option ${r[c]==="Cần kiểm tra"?"selected":""}>Cần kiểm tra</option><option ${r[c]==="Đã kiểm tra"?"selected":""}>Đã kiểm tra</option></select></td>`;
+      return `<td><input data-i="${i}" data-c="${c}" value="${escapeHtml(r[c]||"")}" oninput="cellChange(this)"></td>`;
+    }).join("");
+    tb.appendChild(tr);
+  });
+}
+function cellChange(el){rows[+el.dataset.i][el.dataset.c]=el.value; persist()}
+function showColumnGuide(){
+  const c=$("colMode").value;
+  const map={
+    ngaySo:"Đọc cột NGÀY: 30/10 tiếp 30/10 tiếp 31/10 finish cột",
+    bienSo:"Đọc cột BIỂN SỐ: 19H02254 tiếp 29C12345 tiếp 30A88888 finish cột",
+    gioRa:"Đọc cột GIỜ RA: 12 giờ 30 tiếp 14 giờ 05 tiếp trống tiếp 16 giờ finish cột",
+    gioVao:"Đọc cột GIỜ VÀO: 11 giờ 36 tiếp 13 giờ 20 tiếp trống finish cột",
+    hoTen:"Đọc cột HỌ TÊN: chị Hiền Châu tiếp Nguyễn Đức Duy tiếp anh Hải finish cột",
+    noiDung:"Đọc cột NỘI DUNG: phế liệu tiếp nhôm phế liệu tiếp bánh mì finish cột",
+    khoiLuong:"Đọc cột KHỐI LƯỢNG: 10 kiện tiếp 870 kg tiếp 1000 cái finish cột"
+  };
+  $("guide").textContent=map[c]||"";
+}
+function norm(s){return (s||"").replace(/[;|]/g," tiếp ").replace(/\s+/g," ").trim()}
+function splitValues(s){
+  if($("splitMode").value==="newline"){
+    return s.replace(/finish cột/gi,"").split(/\n+/).map(x=>x.trim()).filter(Boolean);
+  }
+  s=norm(s)
+    .replace(/finish cột/gi,"")
+    .replace(/kết thúc cột/gi,"")
+    .replace(/xong cột/gi,"")
+    .replace(/dòng tiếp/gi," tiếp ")
+    .replace(/xuống dòng/gi," tiếp ");
+  return s.split(/\btiếp\b|,/gi).map(x=>x.trim()).filter(x=>x.length);
+}
+function cleanValue(col,v){
+  v=v.trim();
+  if(/^trống$/i.test(v) || /^bỏ qua$/i.test(v)) return "";
+  if(col==="bienSo") return v.toUpperCase().replace(/\s+/g,"").replace(/[.,]/g,"");
+  if(col==="gioRa"||col==="gioVao") {
+    let x=v.toLowerCase().replace(/giờ/g,":").replace(/h/g,":").replace(/\s+/g,"").replace(/[^0-9:]/g,"");
+    if(/^\d{1,2}$/.test(x)) x += ":00";
+    return x;
+  }
+  if(col==="ngaySo") return v.replace(/ tháng /gi,"/");
+  return v;
+}
+function finishColumn(){
+  if(!rows.length){setStatus("chưa tạo bảng trang.");return}
+  const col=$("colMode").value;
+  const vals=splitValues($("heard").value);
+  vals.forEach((v,i)=>{if(i<rows.length) rows[i][col]=cleanValue(col,v)});
+  persist(); render(); setStatus(`đã điền ${Math.min(vals.length,rows.length)} giá trị vào cột ${col}.`);
+  clearHeard();
+}
+function clearHeard(){$("heard").value=""}
+function applyDefaults(){
+  rows.forEach(r=>{ if(!r.loaiXe) r.loaiXe=$("defaultLoaiXe").value||"Ô tô"; if(!r.ghiChu) r.ghiChu=$("defaultGhiChu").value||""; });
+  persist(); render(); setStatus("đã điền mặc định loại xe và ghi chú.");
+}
+function buildData(){
+  const headers=["STT","Người thống kê","Mã cuốn sổ","Trang","Dòng","Ngày sổ","Loại xe","Biển số","Giờ ra","Giờ vào","Họ tên","Nội dung","Khối lượng","Ghi chú","Trạng thái kiểm tra"];
+  const data=rows.map((r,i)=>[i+1,$("nguoiThongKe").value,$("maSo").value,$("trang").value,i+1,r.ngaySo,r.loaiXe,r.bienSo,r.gioRa,r.gioVao,r.hoTen,r.noiDung,r.khoiLuong,r.ghiChu,r.trangThai]);
+  return {headers,data};
+}
+function safeName(s){return String(s||"").replace(/[^\w\u00C0-\u1EF9-]+/g,"_").slice(0,80)}
+function exportCsv(){
+  const {headers,data}=buildData();
+  const csv=[headers,...data].map(row=>row.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\n");
+  downloadBlob(new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"}), `so_bao_ve_${safeName($("maSo").value)}_trang_${safeName($("trang").value)}.csv`);
+}
+function copyTSV(){
+  const {headers,data}=buildData();
+  navigator.clipboard.writeText([headers,...data].map(a=>a.join("\t")).join("\n")).then(()=>setStatus("đã copy bảng để dán Excel."));
+}
+function exportXlsx(){
+  const {headers,data}=buildData();
+  if(window.XLSX){
+    const ws=XLSX.utils.aoa_to_sheet([headers,...data]);
+    ws["!cols"]=headers.map(h=>({wch:Math.max(12,String(h).length+2)}));
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "DATA_TRANG_SO");
+    XLSX.writeFile(wb, `so_bao_ve_${safeName($("maSo").value)}_trang_${safeName($("trang").value)}.xlsx`);
+    setStatus("đã xuất XLSX.");
+  } else {
+    setStatus("không tải được thư viện XLSX online, đã xuất CSV thay thế.");
+    exportCsv();
+  }
+}
+function downloadBlob(blob, name){
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; a.click(); URL.revokeObjectURL(a.href);
+}
+function startRec(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){setStatus("trình duyệt chưa hỗ trợ nhận dạng giọng nói. Trên iPhone có thể dùng nút micro của bàn phím để nhập vào ô Nội dung vừa nghe.");return}
+  recognition=new SR(); recognition.lang="vi-VN"; recognition.continuous=true; recognition.interimResults=true; listening=true;
+  recognition.onstart=()=>setStatus("đang nghe cột "+$("colMode").value+"...");
+  recognition.onerror=e=>setStatus("lỗi micro: "+e.error);
+  recognition.onend=()=>{ if(listening){try{recognition.start()}catch(e){}} else setStatus("đã dừng."); };
+  recognition.onresult=e=>{
+    let final="", interim="";
+    for(let i=e.resultIndex;i<e.results.length;i++){const txt=e.results[i][0].transcript; if(e.results[i].isFinal) final+=txt+" "; else interim+=txt;}
+    if(final){$("heard").value += " " + final; if(final.toLowerCase().includes("finish cột")||final.toLowerCase().includes("xong cột")) finishColumn();}
+  };
+  try{recognition.start()}catch(e){setStatus("không bật được micro: "+e.message)}
+}
+function stopRec(){listening=false;if(recognition)recognition.stop()}
+$("startBtn").onclick=startRec;$("stopBtn").onclick=stopRec;
+configIds.forEach(id=>$(id).addEventListener("change",()=>{saveConfig();render()}));
+loadConfig(); if(rows.length) render(); showColumnGuide();
+if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{});}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</body>
+</html>

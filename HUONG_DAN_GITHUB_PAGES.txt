@@ -1,0 +1,32 @@
+HƯỚNG DẪN ĐƯA LÊN GITHUB PAGES VÀ CHIA SẺ NHIỀU NGƯỜI
+
+1. Tạo tài khoản GitHub hoặc dùng tài khoản đã có.
+2. Tạo repository mới, ví dụ: so-bao-ve.
+3. Upload 4 file trong thư mục này lên repository:
+   - index.html
+   - manifest.webmanifest
+   - sw.js
+   - HUONG_DAN_GITHUB_PAGES.txt
+4. Vào Settings → Pages.
+5. Source: Deploy from a branch.
+6. Branch: main / root.
+7. Save.
+8. Chờ khoảng 1-3 phút, GitHub sẽ cấp link:
+   https://ten-tai-khoan.github.io/so-bao-ve/
+
+CÁCH DÙNG CHO NGƯỜI NHẬP
+1. Mở link bằng Safari trên iPhone.
+2. Có thể chọn Share → Add to Home Screen để cài như app.
+3. Nhập Người thống kê, Mã cuốn sổ, Trang, Số dòng.
+4. Bấm Tạo bảng trang.
+5. Chọn từng cột rồi đọc:
+   Ví dụ cột biển số:
+   19H02254 tiếp 29C12345 tiếp 30A88888 finish cột
+6. Bảng tự điền hàng loạt.
+7. Sửa tay cột Loại xe, Ghi chú nếu cần.
+8. Bấm Xuất XLSX hoặc Copy để dán Excel.
+
+LƯU Ý
+- Bản này không cần Google Sheet, không cần Apps Script.
+- Dữ liệu lưu trên máy người nhập, sau đó xuất XLSX/CSV gửi lại cho người tổng hợp.
+- Xuất XLSX cần internet để tải thư viện SheetJS từ CDN. Nếu lỗi, app tự xuất CSV thay thế.
